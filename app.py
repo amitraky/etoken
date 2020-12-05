@@ -26,7 +26,7 @@ else:
 
 def back_send_to_client(fileUrl,fileName):
     print("calling cb....")
-    url = 'http://app.pyaribitiya.in:8000/api/save_sigend_certificate_cb?file_name='+fileName
+    url = 'http://localhost/api/save_sigend_certificate_cb?file_name='+fileName
     res = requests.post(url, files={'ComplainFileName': open(fileUrl, 'rb'), 'file_name': fileName})
     return "OK"
    
@@ -192,7 +192,7 @@ def upload():
     if fileUrl == '':
         return jsonify({'status': 0, 'filename': 'file is required'}) 
     
-    pdfUrl = "http://app.pyaribitiya.in:8000/certificate/"+fileUrl
+    pdfUrl = "http://localhost/certificate/"+fileUrl
     r = requests.get(pdfUrl)
     with open(os.path.join(app.config['UPLOAD_FOLDER'],fileUrl),'wb') as f:
         f.write(r.content)  
@@ -219,9 +219,9 @@ def upload():
 @app.route('/api/set', methods=['GET'])
 def get_tasks():
     print("calling cb....")
-    fileName = '5fc881620551ed5ef1070ae0.pdf'
+    fileName = 'pdfsnsdf.pdf'
     fileUrl = UPLOADS_PATH = join(dirname(realpath(__file__)), 'uploads/')+fileName
-    url = 'http://app.pyaribitiya.in:8000/api/save_sigend_certificate_cb?file_name='+fileName
+    url = 'http://localhost/api/save_sigend_certificate_cb?file_name='+fileName
     res = requests.post(url, files={'ComplainFileName': open(fileUrl, 'rb'), 'file_name': fileName})
     return jsonify({'Error': res.text,"fileUrl":fileUrl})
 
