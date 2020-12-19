@@ -9,6 +9,9 @@ import os
 import requests
 from os.path import join, dirname, realpath
 from flask_cors import CORS
+import string
+import re
+
 app = Flask(__name__)
 CORS(app)
 cors = CORS(app, resources={r"*": {"origins": "*"}})
@@ -26,7 +29,7 @@ else:
 
 def back_send_to_client(fileUrl,fileName):
     print("calling cb....")
-    url = 'http://localhost/api/save_sigend_certificate_cb?file_name='+fileName
+    url = 'http://app.pyaribitiya.in:8000/api/save_sigend_certificate_cb?file_name='+fileName
     res = requests.post(url, files={'ComplainFileName': open(fileUrl, 'rb'), 'file_name': fileName})
     return "OK"
    
@@ -38,6 +41,7 @@ class Singers(hsm.HSM):
     def __init__(self,lib):
         hsm.HSM.__init__(self,lib)
         
+        
 class Signer(Singers):   
     def __init__(self,password):
         Singers.__init__(self,dllpath)    
@@ -48,6 +52,8 @@ class Signer(Singers):
         #self.lable = 'VIVEK GUPTA' #dico.get('label')
         lable =  dico.get('label').replace('\x00','')
         self.lable = str(lable)
+        self.name = ''
+        self.certificate()        
         
     def certificate(self):           
         self.login(self.lable, self.password)        
@@ -60,7 +66,7 @@ class Signer(Singers):
             pk11objects = self.session.findObjects(
                 [(PK11.CKA_CLASS, PK11.CKO_CERTIFICATE)])
             all_attributes = [
-                # PK11.CKA_SUBJECT,
+                PK11.CKA_SUBJECT,
                 PK11.CKA_VALUE,
                 # PK11.CKA_ISSUER,
                 # PK11.CKA_CERTIFICATE_CATEGORY,
@@ -76,6 +82,18 @@ class Signer(Singers):
                     continue
 
                 attrDict = dict(list(zip(all_attributes, attributes)))
+                cert = bytes(attrDict[PK11.CKA_VALUE])
+                subject = bytes(attrDict[PK11.CKA_SUBJECT])
+                #value = bytes(attrDict[PK11.CKA_VALUE])
+                #dataRead['x'] = subject.decode('utf-8')
+                #cipher_encrypt = AES.new(subject, AES.MODE_CBC,iv)
+                st = str(subject.decode('windows-1252'))
+                printable = set(string.printable)
+                x = re.sub(r'[^\x00-\x7f]',r'', st)   
+                
+                end_string = ''.join(i for i in x if i in printable)
+                owner_name = end_string.split('0U')[-1];
+                self.name = owner_name
                 
                 cert = bytes(attrDict[PK11.CKA_VALUE])
                 # if keyid == bytes(attrDict[PK11.CKA_ID]):
@@ -94,6 +112,10 @@ class Signer(Singers):
             return bytes(sig)
         finally:
             self.logout()
+    
+    def getSubject(self):
+        print("OK")
+        return self.name         
 
 
 def main(filename,signature,password):    
@@ -117,6 +139,7 @@ def main(filename,signature,password):
     datau = open(fname, 'rb').read()   
     try:
         clshsm = Signer(password)
+        dct['signature'] = dct['signature'].replace("$name",clshsm.getSubject())
         datas = pdf.cms.sign(datau, dct,
                          None, None,
                          [],
@@ -192,7 +215,7 @@ def upload():
     if fileUrl == '':
         return jsonify({'status': 0, 'filename': 'file is required'}) 
     
-    pdfUrl = "http://localhost/certificate/"+fileUrl
+    pdfUrl = "http://app.pyaribitiya.in:8000/certificate/"+fileUrl
     r = requests.get(pdfUrl)
     with open(os.path.join(app.config['UPLOAD_FOLDER'],fileUrl),'wb') as f:
         f.write(r.content)  
@@ -208,20 +231,17 @@ def upload():
         message = str(e)
         response = jsonify({'status': 1,"message":message,'filename': filename,"data":""})
         response.headers.add('Access-Control-Allow-Origin', '*')
-        return response 
-    
+        return response   
         
         
     
     
-        
-        
 @app.route('/api/set', methods=['GET'])
 def get_tasks():
     print("calling cb....")
-    fileName = 'pdfsnsdf.pdf'
+    fileName = '5fc881620551ed5ef1070ae0.pdf'
     fileUrl = UPLOADS_PATH = join(dirname(realpath(__file__)), 'uploads/')+fileName
-    url = 'http://localhost/api/save_sigend_certificate_cb?file_name='+fileName
+    url = 'http://app.pyaribitiya.in:8000/api/save_sigend_certificate_cb?file_name='+fileName
     res = requests.post(url, files={'ComplainFileName': open(fileUrl, 'rb'), 'file_name': fileName})
     return jsonify({'Error': res.text,"fileUrl":fileUrl})
 
