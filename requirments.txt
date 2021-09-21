@@ -1,0 +1,4 @@
+flask
+PyKCS11
+endesive
+flask_cors
